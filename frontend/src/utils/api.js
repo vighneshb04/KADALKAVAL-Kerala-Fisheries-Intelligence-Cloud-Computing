@@ -1,7 +1,7 @@
 // ── API base — change this to your deployed backend URL ──────────────────
 export const API_BASE =
   import.meta.env.VITE_API_URL ||
-  'http://127.0.0.1:8000';
+  'https://kadalkaval-api.onrender.com';
 
 async function get(path) {
   const res = await fetch(`${API_BASE}${path}`, { signal: AbortSignal.timeout(4000) });
