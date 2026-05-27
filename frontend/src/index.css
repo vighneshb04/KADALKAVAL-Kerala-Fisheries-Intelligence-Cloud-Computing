@@ -1,0 +1,127 @@
+/* ── THEME VARIABLES ─────────────────────────────────────────────────── */
+:root {
+  --bg:        #f8f7f4;
+  --bg2:       #ffffff;
+  --bg3:       #f0ede8;
+  --bg4:       #e8e4de;
+  --border:    #e0dbd2;
+  --text:      #1a1a1a;
+  --text2:     #4a4a4a;
+  --text3:     #8a8680;
+  --teal:      #0a7c6e;
+  --teal2:     #0d9e8d;
+  --teal3:     #e6f5f3;
+  --ocean:     #1a5f7a;
+  --ocean2:    #e8f4f8;
+  --amber:     #b45309;
+  --amber2:    #fef3c7;
+  --red:       #dc2626;
+  --red2:      #fee2e2;
+  --green:     #16a34a;
+  --green2:    #dcfce7;
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+  --shadow2:   0 4px 16px rgba(0,0,0,0.10), 0 12px 40px rgba(0,0,0,0.06);
+  --radius:    12px;
+  --radius2:   8px;
+}
+
+.dark {
+  --bg:        #0f1117;
+  --bg2:       #161b22;
+  --bg3:       #1c2230;
+  --bg4:       #242c3a;
+  --border:    #2a3340;
+  --text:      #e8e6e1;
+  --text2:     #a8a49e;
+  --text3:     #6b6860;
+  --teal:      #2dd4bf;
+  --teal2:     #14b8a6;
+  --teal3:     #0d2926;
+  --ocean:     #38bdf8;
+  --ocean2:    #0c2030;
+  --amber:     #fbbf24;
+  --amber2:    #2a1f0a;
+  --red:       #f87171;
+  --red2:      #2a0f0f;
+  --green:     #4ade80;
+  --green2:    #0a2a14;
+  --shadow:    0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+  --shadow2:   0 4px 16px rgba(0,0,0,0.4), 0 12px 40px rgba(0,0,0,0.3);
+}
+
+/* ── RESET ───────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); transition: background 0.3s, color 0.3s; }
+
+/* ── TYPOGRAPHY ──────────────────────────────────────────────────────── */
+.font-display { font-family: 'Playfair Display', serif; }
+.font-mono    { font-family: 'DM Mono', monospace; }
+
+/* ── LAYOUT ──────────────────────────────────────────────────────────── */
+.container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+/* ── CARDS ───────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* ── BADGE ───────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.4px;
+  font-family: 'DM Mono', monospace;
+}
+.badge-teal   { background: var(--teal3);  color: var(--teal);  }
+.badge-ocean  { background: var(--ocean2); color: var(--ocean); }
+.badge-amber  { background: var(--amber2); color: var(--amber); }
+.badge-red    { background: var(--red2);   color: var(--red);   }
+.badge-green  { background: var(--green2); color: var(--green); }
+
+/* ── BUTTONS ─────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 20px; border-radius: var(--radius2); border: none;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all 0.18s; text-decoration: none;
+}
+.btn-primary { background: var(--teal); color: #fff; }
+.btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-ghost {
+  background: transparent; color: var(--text2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { background: var(--bg3); }
+
+/* ── CHART TOOLTIP ───────────────────────────────────────────────────── */
+.chart-tooltip {
+  background: var(--bg2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius2) !important;
+  font-size: 12px !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+
+/* ── SCROLLBAR ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg3); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── ANIMATIONS ──────────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+.fade-up { animation: fadeUp 0.4s ease both; }
+.fade-up-1 { animation-delay: 0.05s; }
+.fade-up-2 { animation-delay: 0.10s; }
+.fade-up-3 { animation-delay: 0.15s; }
+.fade-up-4 { animation-delay: 0.20s; }
+.fade-up-5 { animation-delay: 0.25s; }

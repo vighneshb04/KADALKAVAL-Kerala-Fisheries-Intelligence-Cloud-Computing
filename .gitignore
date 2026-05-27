@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+venv/
+.env
+.python_packages/
+
+# Node
+node_modules/
+dist/
+npm-debug.log*
+
+# VSCode
+.vscode/
+
+# Azure
+.azure/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Build
+build/

@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ChainForensics — Blockchain Forensic Auditing Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ============================================================
+   ROOT VARIABLES & RESET
+   ============================================================ */
+:root {
+  --bg-void:     #01050f;
+  --bg-deep:     #030c1a;
+  --bg-panel:    #060f22;
+  --bg-card:     #08142e;
+  --bg-card2:    #0a1a38;
+  --border:      rgba(0,200,255,0.12);
+  --border-glow: rgba(0,200,255,0.4);
+  --accent:      #00c8ff;
+  --accent2:     #00ff9d;
+  --accent3:     #ff6b35;
+  --accent4:     #a855f7;
+  --text-pri:    #e2f0ff;
+  --text-sec:    #7090b8;
+  --text-dim:    #3a5070;
+  --danger:      #ff3d5a;
+  --warn:        #ffa500;
+  --ok:          #00ff9d;
+  --font-mono:   'Share Tech Mono', monospace;
+  --font-hud:    'Orbitron', sans-serif;
+  --font-body:   'Rajdhani', sans-serif;
+  --glow-accent: 0 0 20px rgba(0,200,255,0.5), 0 0 60px rgba(0,200,255,0.15);
+  --glow-ok:     0 0 20px rgba(0,255,157,0.5);
+  --glow-danger: 0 0 20px rgba(255,61,90,0.5);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-void);
+  color: var(--text-pri);
+  font-family: var(--font-body);
+  font-size: 15px;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: rgba(0,200,255,0.3); border-radius: 3px; }
+
+/* ============================================================
+   LANDING HERO SECTION — isometric pillar animation
+   ============================================================ */
+#hero {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, #0a1f3d 0%, #020810 70%, #000 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Grid floor */
+#hero::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 200%;
+  height: 60%;
+  background:
+    linear-gradient(rgba(0,200,255,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,200,255,0.07) 1px, transparent 1px);
+  background-size: 60px 60px;
+  transform: translateX(-50%) perspective(600px) rotateX(70deg);
+  transform-origin: bottom center;
+  pointer-events: none;
+}
+
+/* Scanline overlay */
+#hero::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+  pointer-events: none;
+}
+
+.hero-title {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.hero-title h1 {
+  font-family: var(--font-hud);
+  font-size: clamp(2rem, 5vw, 3.8rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #fff;
+  text-shadow: var(--glow-accent);
+  line-height: 1.15;
+}
+
+.hero-title h1 span { color: var(--accent); }
+
+.hero-title p {
+  margin-top: 14px;
+  color: var(--text-sec);
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  max-width: 520px;
+  margin-inline: auto;
+  font-family: var(--font-body);
+  font-weight: 500;
+}
+
+/* Isometric Pillars */
+#pillars-scene {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 500px;
+  perspective: 900px;
+}
+
+.pillar-wrap {
+  position: absolute;
+  bottom: 30px;
+  transform-style: preserve-3d;
+  animation: pillarFloat 0s ease-in-out infinite alternate;
+}
+
+/* Pillar positions */
+.pillar-wrap:nth-child(1) { left: 50px;  animation-duration: 3.1s; }
+.pillar-wrap:nth-child(2) { left: 215px; animation-duration: 2.7s; }
+.pillar-wrap:nth-child(3) { left: 380px; animation-duration: 2.4s; bottom: 50px; }
+.pillar-wrap:nth-child(4) { left: 545px; animation-duration: 3.0s; }
+.pillar-wrap:nth-child(5) { left: 710px; animation-duration: 2.8s; }
+
+@keyframes pillarFloat {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-14px); }
+}
+
+.pillar {
+  position: relative;
+  width: 120px;
+  cursor: pointer;
+  transition: filter 0.3s;
+}
+
+.pillar:hover { filter: brightness(1.4); }
+
+/* Each pillar: top face + front face + side face via CSS 3D */
+.pillar-top,
+.pillar-front,
+.pillar-side {
+  position: absolute;
+  border: 1px solid rgba(0,200,255,0.2);
+}
+
+/* We fake isometric using 2D clip-paths */
+.pillar-iso {
+  position: relative;
+  width: 120px;
+}
+
+/* top face parallelogram */
+.p-top {
+  width: 120px;
+  height: 34px;
+  background: linear-gradient(135deg, #1a3050, #0d1e35);
+  clip-path: polygon(60px 0, 120px 17px, 60px 34px, 0 17px);
+  border: 1px solid rgba(0,200,255,0.3);
+  position: relative;
+}
+
+/* front face */
+.p-front {
+  width: 60px;
+  background: linear-gradient(180deg, #0d2040, #060f1e);
+  border: 1px solid rgba(0,200,255,0.15);
+  border-top: none;
+  position: relative;
+  margin-left: 60px;
+}
+
+/* side face */
+.p-side {
+  position: absolute;
+  width: 60px;
+  background: linear-gradient(180deg, #091828, #03090f);
+  border: 1px solid rgba(0,200,255,0.1);
+  border-top: none;
+  clip-path: polygon(0 0, 60px 0, 60px 100%, 0 100%);
+  left: 0;
+}
+
+.p-label {
+  position: absolute;
+  bottom: 12px;
+  left: 0; right: 0;
+  text-align: center;
+  font-family: var(--font-hud);
+  font-size: 0.55rem;
+  color: rgba(0,200,255,0.7);
+  letter-spacing: 0.1em;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.p-num {
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-hud);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-pri);
+  text-shadow: 0 0 10px rgba(0,200,255,0.7);
+}
+
+/* Highlighted middle pillar */
+.pillar-wrap:nth-child(3) .p-top {
+  background: linear-gradient(135deg, #0a3050, #00c8ff22);
+  border-color: rgba(0,200,255,0.7);
+  box-shadow: 0 0 18px rgba(0,200,255,0.4);
+}
+.pillar-wrap:nth-child(3) .p-front { background: linear-gradient(180deg, #0a2040, #040e1e); border-color: rgba(0,200,255,0.3); }
+.pillar-wrap:nth-child(3) .p-side  { background: linear-gradient(180deg, #071525, #02070d); }
+
+/* Cube icon on top of centre pillar */
+.cube-icon {
+  position: absolute;
+  top: -62px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #00c8ff, #00ff9d);
+  border-radius: 8px;
+  box-shadow: 0 0 24px rgba(0,200,255,0.8), 0 0 60px rgba(0,200,255,0.3);
+  animation: cubeRotate 4s linear infinite;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+}
+
+@keyframes cubeRotate {
+  0%   { transform: translateX(-50%) rotate(0deg) scale(1); }
+  50%  { transform: translateX(-50%) rotate(180deg) scale(1.1); }
+  100% { transform: translateX(-50%) rotate(360deg) scale(1); }
+}
+
+/* Tooltip on hover for pillar */
+.pillar-tooltip {
+  position: absolute;
+  top: -60px;
+  right: -180px;
+  width: 220px;
+  background: rgba(6,15,34,0.95);
+  border: 1px solid rgba(0,200,255,0.3);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--text-pri);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 20;
+  box-shadow: var(--glow-accent);
+}
+
+.pillar-wrap:nth-child(3) .pillar-tooltip {
+  opacity: 1; /* always show centre tooltip */
+}
+
+.pillar-wrap:hover .pillar-tooltip { opacity: 1; }
+
+/* Scroll cue */
+.scroll-cue {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  text-align: center;
+  color: var(--text-dim);
+  font-family: var(--font-hud);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  animation: scrollBounce 2s ease-in-out infinite;
+  cursor: pointer;
+}
+
+.scroll-cue::after {
+  content: '';
+  display: block;
+  margin: 8px auto 0;
+  width: 1px;
+  height: 36px;
+  background: linear-gradient(to bottom, rgba(0,200,255,0.6), transparent);
+  animation: scrollBounce 2s ease-in-out infinite;
+}
+
+@keyframes scrollBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%       { transform: translateX(-50%) translateY(8px); }
+}
+
+/* Enter button */
+.enter-btn {
+  position: relative;
+  z-index: 10;
+  margin-top: 32px;
+  padding: 14px 40px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--font-hud);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 4px;
+  box-shadow: var(--glow-accent);
+  transition: all 0.3s;
+  clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+}
+
+.enter-btn:hover {
+  background: rgba(0,200,255,0.1);
+  box-shadow: 0 0 40px rgba(0,200,255,0.6), 0 0 80px rgba(0,200,255,0.2);
+  color: #fff;
+}
+
+/* ============================================================
+   DASHBOARD SECTION
+   ============================================================ */
+#dashboard {
+  display: none; /* shown after hero scroll */
+  background: var(--bg-void);
+  min-height: 100vh;
+}
+
+/* ---- TOP NAVIGATION ---- */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 56px;
+  background: rgba(3,12,26,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 20px;
+}
+
+.nav-logo {
+  font-family: var(--font-hud);
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  white-space: nowrap;
+  text-shadow: var(--glow-accent);
+}
+
+.nav-logo span { color: var(--text-sec); font-weight: 400; }
+
+.nav-divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+
+.nav-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-sec);
+}
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: var(--glow-ok);
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.8); }
+}
+
+.nav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+#live-clock {
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+
+.refresh-indicator {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+}
+
+.refreshing .refresh-indicator {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- LAYOUT ---- */
+.dash-main {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* ---- SECTION HEADER ---- */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-header h2 {
+  font-family: var(--font-hud);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.section-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--border-glow), transparent);
+}
+
+.section-badge {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+/* ---- STAT CARDS ---- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
+  cursor: default;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.stat-card:hover {
+  border-color: var(--border-glow);
+  box-shadow: var(--glow-accent);
+  transform: translateY(-2px);
+}
+
+.stat-card:hover::before { opacity: 1; }
+
+.stat-card.green::before  { background: var(--accent2); box-shadow: 0 0 12px var(--accent2); }
+.stat-card.orange::before { background: var(--accent3); box-shadow: 0 0 12px var(--accent3); }
+.stat-card.purple::before { background: var(--accent4); box-shadow: 0 0 12px var(--accent4); }
+.stat-card.red::before    { background: var(--danger);  box-shadow: 0 0 12px var(--danger); }
+
+.stat-label {
+  font-family: var(--font-hud);
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.stat-value {
+  font-family: var(--font-hud);
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--text-pri);
+  line-height: 1;
+  text-shadow: 0 0 20px rgba(0,200,255,0.3);
+}
+
+.stat-value.ok     { color: var(--ok);     text-shadow: var(--glow-ok); }
+.stat-value.warn   { color: var(--warn);   }
+.stat-value.danger { color: var(--danger); text-shadow: var(--glow-danger); }
+
+.stat-sub {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+}
+
+.stat-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 2rem;
+  opacity: 0.08;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ---- HEALTH BAR ---- */
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.health-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.health-indicator {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.health-indicator.ok     { background: var(--ok);     box-shadow: var(--glow-ok); }
+.health-indicator.warn   { background: var(--warn); }
+.health-indicator.danger { background: var(--danger); box-shadow: var(--glow-danger); }
+
+.health-info { flex: 1; min-width: 0; }
+.health-label {
+  font-family: var(--font-hud);
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.health-value {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-pri);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- CHARTS ---- */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  position: relative;
+}
+
+.chart-title {
+  font-family: var(--font-hud);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.chart-canvas-wrap {
+  position: relative;
+  height: 180px;
+}
+
+/* ---- BLOCKCHAIN EXPLORER ---- */
+.explorer-controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 14px;
+  color: var(--text-pri);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0,200,255,0.1);
+}
+
+.search-input::placeholder { color: var(--text-dim); }
+
+.btn-sm {
+  padding: 9px 18px;
+  background: rgba(0,200,255,0.08);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-family: var(--font-hud);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-sm:hover {
+  background: rgba(0,200,255,0.15);
+  border-color: var(--accent);
+  box-shadow: var(--glow-accent);
+}
+
+/* Block cards in explorer */
+.blocks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.block-card {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.block-card:hover {
+  border-color: rgba(0,200,255,0.3);
+  box-shadow: 0 0 16px rgba(0,200,255,0.08);
+}
+
+.block-card.genesis .block-header-bar {
+  border-left: 3px solid var(--accent2);
+}
+
+.block-header-bar {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  gap: 12px;
+  border-left: 3px solid var(--accent);
+  user-select: none;
+}
+
+.block-index-badge {
+  font-family: var(--font-hud);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--bg-deep);
+  background: var(--accent);
+  padding: 2px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.genesis .block-index-badge { background: var(--accent2); color: var(--bg-deep); }
+
+.block-hash-preview {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-sec);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.block-tx-count {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.block-chevron {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.block-card.expanded .block-chevron { transform: rotate(90deg); }
+
+.block-details {
+  display: none;
+  padding: 0 16px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.block-card.expanded .block-details { display: block; }
+
+.block-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px 20px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.meta-item { }
+.meta-key {
+  font-family: var(--font-hud);
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.meta-val {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-sec);
+  word-break: break-all;
+}
+
+/* ---- TRANSACTIONS PANEL ---- */
+.tx-table-wrap {
+  overflow-x: auto;
+}
+
+.tx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+.tx-table th {
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--bg-deep);
+  color: var(--text-dim);
+  font-family: var(--font-hud);
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.tx-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0,200,255,0.05);
+  color: var(--text-sec);
+  vertical-align: top;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-table tr:hover td {
+  background: rgba(0,200,255,0.03);
+  color: var(--text-pri);
+}
+
+.tx-table .tx-id { color: var(--accent); }
+
+/* Signature badge */
+.sig-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.sig-badge.valid   { background: rgba(0,255,157,0.15); color: var(--ok); border: 1px solid rgba(0,255,157,0.3); }
+.sig-badge.invalid { background: rgba(255,61,90,0.15);  color: var(--danger); border: 1px solid rgba(255,61,90,0.3); }
+.sig-badge.unknown { background: rgba(255,165,0,0.12); color: var(--warn); border: 1px solid rgba(255,165,0,0.3); }
+
+/* ---- VERIFICATION PANEL ---- */
+.verify-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 800px) { .verify-layout { grid-template-columns: 1fr; } }
+
+.verify-input-card,
+.verify-result-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.verify-textarea {
+  width: 100%;
+  height: 180px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent2);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  padding: 12px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-bottom: 12px;
+}
+
+.verify-textarea:focus {
+  border-color: var(--accent);
+}
+
+.btn-verify {
+  width: 100%;
+  padding: 13px;
+  background: rgba(0,200,255,0.08);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--font-hud);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--glow-accent);
+}
+
+.btn-verify:hover {
+  background: rgba(0,200,255,0.18);
+  box-shadow: 0 0 30px rgba(0,200,255,0.4);
+}
+
+.btn-verify:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.verify-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  gap: 16px;
+}
+
+.verify-icon {
+  font-size: 3.5rem;
+  animation: verifyPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes verifyPop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.verify-label {
+  font-family: var(--font-hud);
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+.verify-label.v-ok      { color: var(--ok);     text-shadow: var(--glow-ok); }
+.verify-label.v-mismatch { color: var(--danger); text-shadow: var(--glow-danger); }
+.verify-label.v-invalid  { color: var(--warn); }
+.verify-label.v-notfound { color: var(--text-sec); }
+
+.verify-detail {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  text-align: center;
+  max-width: 240px;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.verify-idle {
+  text-align: center;
+  font-family: var(--font-hud);
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.verify-idle-icon { font-size: 2.5rem; opacity: 0.3; }
+
+/* ---- LOADING ---- */
+.loading-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 10px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ---- ERROR BANNER ---- */
+.error-banner {
+  background: rgba(255,61,90,0.08);
+  border: 1px solid rgba(255,61,90,0.3);
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--danger);
+  display: none;
+}
+
+.error-banner.show { display: block; }
+
+/* ---- GRID ROWS for 2 or 3 cols ---- */
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 1100px) { .row-3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 700px)  { .row-2, .row-3 { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+/* Fade-in for dashboard sections */
+.fade-section {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.fade-section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+/* Tx search row */
+.tx-search-row {
+  margin-bottom: 14px;
+}
+
+/* Footer */
+.dash-footer {
+  text-align: center;
+  padding: 24px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+}
+
+/* ============================================================
+   SCROLL TRANSITION: hero → dashboard
+   ============================================================ */
+#hero {
+  transition: opacity 0.5s ease;
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HERO LANDING SECTION
+     ============================================================ -->
+<section id="hero">
+  <div class="hero-title">
+    <h1>Our Approach to<br/><span>Cyber Defense</span></h1>
+    <p>At ChainForensics, we believe cybersecurity goes beyond implementing tools — it encompasses a comprehensive blockchain audit strategy, meticulous precision, and strong forensic partnerships.</p>
+    <button class="enter-btn" onclick="enterDashboard()">▶ ENTER DASHBOARD</button>
+  </div>
+
+  <!-- Isometric 3D Pillars -->
+  <div id="pillars-scene">
+
+    <!-- Pillar 1: Risk-First Thinking -->
+    <div class="pillar-wrap" style="left:30px; bottom:30px;">
+      <div class="pillar">
+        <span class="p-num">01</span>
+        <div class="pillar-iso">
+          <div class="p-top"></div>
+          <div style="display:flex; position:relative;">
+            <div class="p-side" style="height:220px;"></div>
+            <div class="p-front" style="height:220px;"></div>
+          </div>
+          <div class="p-label">Risk-First Thinking</div>
+        </div>
+        <div class="pillar-tooltip">
+          <strong style="color:var(--accent);">Risk-First Thinking</strong><br/>
+          Identify and prioritize threats before they materialize on chain.
+        </div>
+      </div>
+    </div>
+
+    <!-- Pillar 2: Constant Improvement -->
+    <div class="pillar-wrap" style="left:195px; bottom:30px;">
+      <div class="pillar">
+        <span class="p-num">02</span>
+        <div class="pillar-iso">
+          <div class="p-top"></div>
+          <div style="display:flex; position:relative;">
+            <div class="p-side" style="height:290px;"></div>
+            <div class="p-front" style="height:290px;"></div>
+          </div>
+          <div class="p-label">Constant Improvement</div>
+        </div>
+        <div class="pillar-tooltip">
+          <strong style="color:var(--accent);">Constant Improvement</strong><br/>
+          Continuous refinement of forensic detection algorithms.
+        </div>
+      </div>
+    </div>
+
+    <!-- Pillar 3: Protection Plans (highlighted/tallest) -->
+    <div class="pillar-wrap" style="left:360px; bottom:50px;">
+      <div class="pillar">
+        <span class="p-num">03</span>
+        <div class="cube-icon">🔷</div>
+        <div class="pillar-iso">
+          <div class="p-top"></div>
+          <div style="display:flex; position:relative;">
+            <div class="p-side" style="height:340px;"></div>
+            <div class="p-front" style="height:340px;"></div>
+          </div>
+          <div class="p-label">Protection Plans</div>
+        </div>
+        <div class="pillar-tooltip">
+          <strong style="color:var(--accent);">Protection Plans</strong><br/>
+          Every organization is unique — solutions are custom-fit to your environment, size, and compliance needs.
+        </div>
+      </div>
+    </div>
+
+    <!-- Pillar 4: Continuous Improvement -->
+    <div class="pillar-wrap" style="left:525px; bottom:30px;">
+      <div class="pillar">
+        <span class="p-num">04</span>
+        <div class="pillar-iso">
+          <div class="p-top"></div>
+          <div style="display:flex; position:relative;">
+            <div class="p-side" style="height:270px;"></div>
+            <div class="p-front" style="height:270px;"></div>
+          </div>
+          <div class="p-label">Continuous Improvement</div>
+        </div>
+        <div class="pillar-tooltip">
+          <strong style="color:var(--accent);">Continuous Improvement</strong><br/>
+          Real-time monitoring and adaptive threat response.
+        </div>
+      </div>
+    </div>
+
+    <!-- Pillar 5: Solid Collaboration -->
+    <div class="pillar-wrap" style="left:690px; bottom:30px;">
+      <div class="pillar">
+        <span class="p-num">05</span>
+        <div class="pillar-iso">
+          <div class="p-top"></div>
+          <div style="display:flex; position:relative;">
+            <div class="p-side" style="height:210px;"></div>
+            <div class="p-front" style="height:210px;"></div>
+          </div>
+          <div class="p-label">Solid Collaboration</div>
+        </div>
+        <div class="pillar-tooltip">
+          <strong style="color:var(--accent);">Solid Collaboration</strong><br/>
+          Integrated partnerships for end-to-end forensic chain-of-custody.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-cue" onclick="enterDashboard()">SCROLL TO DASHBOARD</div>
+</section>
+
+<!-- ============================================================
+     DASHBOARD SECTION
+     ============================================================ -->
+<div id="dashboard">
+
+  <!-- TOP NAV -->
+  <nav class="topnav" id="topnav">
+    <span class="nav-logo">CHAIN<span>FORENSICS</span></span>
+    <div class="nav-divider"></div>
+    <div class="nav-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">CONNECTING…</span>
+    </div>
+    <div class="nav-right">
+      <span id="live-clock">--:--:--</span>
+      <div class="nav-divider"></div>
+      <span>AUTO-REFRESH 5s</span>
+      <div class="refresh-indicator" id="refreshIndicator"></div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div class="dash-main">
+
+    <!-- ERROR BANNER -->
+    <div class="error-banner" id="errorBanner">
+      ⚠ Unable to connect to blockchain node at http://localhost:8000. Ensure the node is running and CORS is enabled.
+    </div>
+
+    <!-- 1. STATISTICS CARDS -->
+    <div class="fade-section" id="sec-stats">
+      <div class="section-header">
+        <h2>System Overview</h2>
+        <div class="section-line"></div>
+        <div class="section-badge" id="lastUpdated">LOADING…</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">⛓</div>
+          <div class="stat-label">Total Blocks</div>
+          <div class="stat-value" id="statBlocks">—</div>
+          <div class="stat-sub">Confirmed on chain</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">📋</div>
+          <div class="stat-label">Total Transactions</div>
+          <div class="stat-value" id="statTx">—</div>
+          <div class="stat-sub">Across all blocks</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon">📊</div>
+          <div class="stat-label">Logs Processed</div>
+          <div class="stat-value" id="statLogs">—</div>
+          <div class="stat-sub">Forensic log entries</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-label">Avg TPS</div>
+          <div class="stat-value" id="statTPS">—</div>
+          <div class="stat-sub">Transactions per second</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🛡</div>
+          <div class="stat-label">Blockchain Status</div>
+          <div class="stat-value ok" id="statStatus">—</div>
+          <div class="stat-sub">Chain integrity</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">✓</div>
+          <div class="stat-label">Verification Accuracy</div>
+          <div class="stat-value" id="statAccuracy">—</div>
+          <div class="stat-sub">Signature validity rate</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. BLOCKCHAIN HEALTH INDICATORS -->
+    <div class="fade-section" id="sec-health">
+      <div class="section-header">
+        <h2>Blockchain Health</h2>
+        <div class="section-line"></div>
+        <div class="section-badge">LIVE</div>
+      </div>
+      <div class="health-grid">
+        <div class="health-card">
+          <div class="health-indicator ok" id="h-integrity"></div>
+          <div class="health-info">
+            <div class="health-label">Chain Integrity</div>
+            <div class="health-value" id="hv-integrity">Checking…</div>
+          </div>
+        </div>
+        <div class="health-card">
+          <div class="health-indicator ok" id="h-timestamp"></div>
+          <div class="health-info">
+            <div class="health-label">Latest Block Timestamp</div>
+            <div class="health-value" id="hv-timestamp">—</div>
+          </div>
+        </div>
+        <div class="health-card">
+          <div class="health-indicator ok" id="h-duplicate"></div>
+          <div class="health-info">
+            <div class="health-label">Duplicate Detection</div>
+            <div class="health-value" id="hv-duplicate">Running…</div>
+          </div>
+        </div>
+        <div class="health-card">
+          <div class="health-indicator ok" id="h-merkle"></div>
+          <div class="health-info">
+            <div class="health-label">Merkle Verification</div>
+            <div class="health-value" id="hv-merkle">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. REAL-TIME CHARTS -->
+    <div class="fade-section" id="sec-charts">
+      <div class="section-header">
+        <h2>Real-Time Analytics</h2>
+        <div class="section-line"></div>
+        <div class="section-badge">LIVE CHARTS</div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">⛓ Block Growth Timeline</div>
+          <div class="chart-canvas-wrap">
+            <canvas id="chartBlocks"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">⚡ Transactions Per Second</div>
+          <div class="chart-canvas-wrap">
+            <canvas id="chartTPS"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📊 Logs Processed Over Time</div>
+          <div class="chart-canvas-wrap">
+            <canvas id="chartLogs"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. BLOCKCHAIN EXPLORER -->
+    <div class="fade-section" id="sec-explorer">
+      <div class="section-header">
+        <h2>Blockchain Explorer</h2>
+        <div class="section-line"></div>
+        <div class="section-badge" id="blockCount">0 BLOCKS</div>
+      </div>
+      <div class="explorer-controls">
+        <input class="search-input" id="searchHash" type="text" placeholder="Search block by hash or index…" oninput="filterBlocks()"/>
+        <button class="btn-sm" onclick="clearBlockSearch()">CLEAR</button>
+      </div>
+      <div class="blocks-list" id="blocksList">
+        <div class="loading-overlay"><div class="spinner"></div>Fetching blockchain…</div>
+      </div>
+    </div>
+
+    <!-- 5. TRANSACTIONS PANEL -->
+    <div class="fade-section" id="sec-tx">
+      <div class="section-header">
+        <h2>Transaction Log</h2>
+        <div class="section-line"></div>
+        <div class="section-badge" id="txCount">0 TXs</div>
+      </div>
+      <div class="tx-search-row">
+        <input class="search-input" id="searchTx" type="text" placeholder="Search by TX ID, source IP, process name…" oninput="filterTxs()" style="max-width:500px;"/>
+      </div>
+      <div class="panel" style="padding:0; overflow:hidden;">
+        <div class="tx-table-wrap">
+          <table class="tx-table" id="txTable">
+            <thead>
+              <tr>
+                <th>TX ID</th>
+                <th>Log Hash</th>
+                <th>Source ID</th>
+                <th>Timestamp</th>
+                <th>Signature</th>
+                <th>Process</th>
+                <th>Source IP</th>
+              </tr>
+            </thead>
+            <tbody id="txBody">
+              <tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div>Loading transactions…</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. VERIFICATION PANEL -->
+    <div class="fade-section" id="sec-verify">
+      <div class="section-header">
+        <h2>Forensic Evidence Verification</h2>
+        <div class="section-line"></div>
+        <div class="section-badge">VERIFY ON-CHAIN</div>
+      </div>
+      <div class="verify-layout">
+        <div class="verify-input-card">
+          <div class="chart-title" style="margin-bottom:10px;">📋 Paste Forensic Evidence JSON</div>
+          <textarea class="verify-textarea" id="verifyInput" placeholder='{
+  "tx_id": "abc123...",
+  "log_hash": "sha256:...",
+  "source_id": "host-01",
+  "signature": "...",
+  "timestamp": "2024-01-01T00:00:00Z"
+}'></textarea>
+          <button class="btn-verify" id="verifyBtn" onclick="runVerify()">▶ VERIFY ON BLOCKCHAIN</button>
+        </div>
+        <div class="verify-result-card">
+          <div class="chart-title" style="margin-bottom:10px;">🔍 Verification Result</div>
+          <div class="verify-status" id="verifyStatus">
+            <div class="verify-idle">
+              <div class="verify-idle-icon">🔒</div>
+              <span>AWAITING EVIDENCE INPUT</span>
+              <span style="margin-top:4px;font-size:0.55rem;">Paste JSON and click VERIFY</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end dash-main -->
+
+  <div class="dash-footer">
+    CHAINFORENSICS DASHBOARD &nbsp;|&nbsp; BLOCKCHAIN FORENSIC AUDIT SYSTEM &nbsp;|&nbsp;
+    <span id="footerTime"></span> &nbsp;|&nbsp; NODE: localhost:8000
+  </div>
+
+</div><!-- end dashboard -->
+
+<script>
+/* ============================================================
+   STATE
+   ============================================================ */
+const API_BASE   = 'http://localhost:8000';
+const API_CHAIN  = `${API_BASE}/chain`;
+const API_VERIFY = `${API_BASE}/verify`;
+const REFRESH_MS = 5000;
+
+let chainData       = [];        // raw blocks from API
+let allTransactions = [];        // flattened tx list
+let refreshTimer    = null;
+let chartBlocksInst = null;
+let chartTPSInst    = null;
+let chartLogsInst   = null;
+let blockHistory    = [];        // [{time, count}] for charts
+let tpsHistory      = [];
+let logsHistory     = [];
+let dashboardVisible = false;
+
+/* ============================================================
+   HERO → DASHBOARD TRANSITION
+   (scroll or button triggers the morph)
+   ============================================================ */
+function enterDashboard() {
+  const hero = document.getElementById('hero');
+  const dash = document.getElementById('dashboard');
+
+  // Fade hero out
+  hero.style.opacity = '0';
+  hero.style.pointerEvents = 'none';
+
+  setTimeout(() => {
+    hero.style.display = 'none';
+    dash.style.display = 'block';
+    dashboardVisible = true;
+
+    // Animate sections in with stagger
+    const sections = dash.querySelectorAll('.fade-section');
+    sections.forEach((s, i) => {
+      setTimeout(() => s.classList.add('visible'), i * 120);
+    });
+
+    // Init charts & start data fetch
+    initCharts();
+    startRefresh();
+    tickClock();
+  }, 500);
+}
+
+// Allow scrolling down on hero to trigger transition
+let scrollWatching = true;
+window.addEventListener('scroll', () => {
+  if (scrollWatching && window.scrollY > 80) {
+    scrollWatching = false;
+    enterDashboard();
+  }
+});
+
+/* ============================================================
+   CLOCK
+   ============================================================ */
+function tickClock() {
+  const el = document.getElementById('live-clock');
+  const ft = document.getElementById('footerTime');
+  function update() {
+    const now = new Date();
+    const str = now.toUTCString().split(' ')[4] + ' UTC';
+    if (el) el.textContent = str;
+    if (ft) ft.textContent = now.toISOString().replace('T',' ').slice(0,19) + ' UTC';
+  }
+  update();
+  setInterval(update, 1000);
+}
+
+/* ============================================================
+   CHART INIT
+   ============================================================ */
+function chartDefaults() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 400 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(6,15,34,0.95)',
+        titleColor: '#00c8ff',
+        bodyColor: '#7090b8',
+        borderColor: 'rgba(0,200,255,0.3)',
+        borderWidth: 1,
+        titleFont: { family: "'Orbitron', sans-serif", size: 10 },
+        bodyFont:  { family: "'Share Tech Mono', monospace", size: 10 }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#3a5070', font: { family: "'Share Tech Mono'", size: 9 }, maxRotation: 0 },
+        grid:  { color: 'rgba(0,200,255,0.05)' }
+      },
+      y: {
+        ticks: { color: '#3a5070', font: { family: "'Share Tech Mono'", size: 9 } },
+        grid:  { color: 'rgba(0,200,255,0.05)' }
+      }
+    }
+  };
+}
+
+function initCharts() {
+  const lineStyle = (color, fill) => ({
+    borderColor: color,
+    backgroundColor: fill,
+    tension: 0.4,
+    pointRadius: 3,
+    pointBackgroundColor: color,
+    fill: true
+  });
+
+  // Block Growth
+  chartBlocksInst = new Chart(document.getElementById('chartBlocks'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Blocks',
+        data: [],
+        ...lineStyle('#00c8ff', 'rgba(0,200,255,0.06)')
+      }]
+    },
+    options: chartDefaults()
+  });
+
+  // TPS
+  chartTPSInst = new Chart(document.getElementById('chartTPS'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'TPS',
+        data: [],
+        ...lineStyle('#00ff9d', 'rgba(0,255,157,0.06)')
+      }]
+    },
+    options: chartDefaults()
+  });
+
+  // Logs
+  chartLogsInst = new Chart(document.getElementById('chartLogs'), {
+    type: 'bar',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Logs',
+        data: [],
+        backgroundColor: 'rgba(168,85,247,0.25)',
+        borderColor: '#a855f7',
+        borderWidth: 1,
+        borderRadius: 3
+      }]
+    },
+    options: chartDefaults()
+  });
+}
+
+function pushChart(inst, label, value, maxPoints = 20) {
+  inst.data.labels.push(label);
+  inst.data.datasets[0].data.push(value);
+  if (inst.data.labels.length > maxPoints) {
+    inst.data.labels.shift();
+    inst.data.datasets[0].data.shift();
+  }
+  inst.update('none');
+}
+
+/* ============================================================
+   DATA FETCH
+   ============================================================ */
+function startRefresh() {
+  fetchChain();
+  refreshTimer = setInterval(fetchChain, REFRESH_MS);
+}
+
+async function fetchChain() {
+  setRefreshing(true);
+  try {
+    const res = await fetch(API_CHAIN, {
+      headers: { 'Accept': 'application/json' },
+      mode: 'cors'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    // Accept array of blocks OR { chain: [...] }
+    chainData = Array.isArray(data) ? data : (data.chain || data.blocks || []);
+    hideError();
+    processChain();
+  } catch (e) {
+    showError();
+    // In demo/dev mode, generate mock data so UI still looks great
+    if (chainData.length === 0) generateMockChain();
+    processChain();
+  } finally {
+    setRefreshing(false);
+  }
+}
+
+/* ============================================================
+   MOCK DATA (fallback when node is offline)
+   ============================================================ */
+function generateMockChain() {
+  const processes = ['sshd','nginx','auditd','systemd','docker','python3','node','bash'];
+  const ips = ['10.0.0.1','192.168.1.55','172.16.0.10','203.0.113.42','198.51.100.7'];
+  let prev = '0000000000000000000000000000000000000000000000000000000000000000';
+
+  chainData = Array.from({ length: 8 }, (_, bi) => {
+    const txCount = Math.floor(Math.random() * 5) + 1;
+    const transactions = Array.from({ length: txCount }, (__, ti) => ({
+      tx_id:       `tx-${bi}-${ti}-${Math.random().toString(36).slice(2,10)}`,
+      log_hash:    `sha256:${Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}`,
+      source_id:   `host-${String(Math.floor(Math.random()*10)).padStart(2,'0')}`,
+      consensus_timestamp: new Date(Date.now() - (8-bi)*60000 - ti*5000).toISOString(),
+      signature_status:    Math.random() > 0.15 ? 'valid' : (Math.random() > 0.5 ? 'invalid' : 'unknown'),
+      process_name:        processes[Math.floor(Math.random()*processes.length)],
+      source_ip:           ips[Math.floor(Math.random()*ips.length)]
+    }));
+    const h = `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}00`;
+    const block = {
+      index:         bi,
+      hash:          h,
+      previous_hash: prev,
+      timestamp:     new Date(Date.now() - (8-bi)*60000).toISOString(),
+      merkle_root:   `mr-${Math.random().toString(36).slice(2,20)}`,
+      transactions
+    };
+    prev = h;
+    return block;
+  });
+}
+
+/* ============================================================
+   PROCESS CHAIN DATA
+   ============================================================ */
+function processChain() {
+  if (!chainData || chainData.length === 0) return;
+
+  allTransactions = chainData.flatMap(b => {
+    const txs = b.transactions || b.data || b.tx || [];
+    return txs.map(tx => ({ ...tx, _blockIndex: b.index }));
+  });
+
+  const totalBlocks = chainData.length;
+  const totalTx     = allTransactions.length;
+  const totalLogs   = allTransactions.filter(tx => tx.log_hash).length;
+
+  // Estimate TPS from timestamps
+  const timestamps = chainData.map(b => new Date(b.timestamp || b.created_at || Date.now()).getTime()).filter(Boolean).sort();
+  let tps = 0;
+  if (timestamps.length >= 2) {
+    const elapsed = (timestamps[timestamps.length - 1] - timestamps[0]) / 1000;
+    tps = elapsed > 0 ? (totalTx / elapsed).toFixed(3) : totalTx;
+  }
+
+  // Signature validity
+  const validSigs = allTransactions.filter(tx => (tx.signature_status || tx.sig_status || '').toLowerCase() === 'valid').length;
+  const accuracy  = totalTx > 0 ? ((validSigs / totalTx) * 100).toFixed(1) + '%' : 'N/A';
+
+  // Chain integrity: check prev_hash links
+  let integrityOk = true;
+  for (let i = 1; i < chainData.length; i++) {
+    const prev = chainData[i].previous_hash || chainData[i].prev_hash;
+    const prevHash = chainData[i-1].hash;
+    if (prev && prevHash && prev !== prevHash) { integrityOk = false; break; }
+  }
+
+  // Update stats
+  setText('statBlocks',   totalBlocks);
+  setText('statTx',       totalTx);
+  setText('statLogs',     totalLogs);
+  setText('statTPS',      tps || '0.000');
+  setText('statStatus',   integrityOk ? 'HEALTHY' : 'BROKEN');
+  document.getElementById('statStatus').className = 'stat-value ' + (integrityOk ? 'ok' : 'danger');
+  setText('statAccuracy', accuracy);
+  setText('lastUpdated',  'UPDATED ' + new Date().toLocaleTimeString());
+  setText('blockCount',   totalBlocks + ' BLOCKS');
+  setText('txCount',      totalTx + ' TXs');
+
+  // Health indicators
+  setHealth('integrity',  integrityOk ? 'ok' : 'danger', integrityOk ? 'ALL HASHES VALID' : '⚠ HASH MISMATCH DETECTED');
+  const latestBlock = chainData[chainData.length - 1];
+  const latestTs = latestBlock?.timestamp || latestBlock?.created_at || '—';
+  setHealth('timestamp', 'ok', new Date(latestTs).toLocaleString());
+  // Duplicate TX check
+  const txIds = allTransactions.map(t => t.tx_id || t.id).filter(Boolean);
+  const hasDupes = new Set(txIds).size < txIds.length;
+  setHealth('duplicate', hasDupes ? 'warn' : 'ok', hasDupes ? '⚠ DUPLICATES FOUND' : 'NO DUPLICATES DETECTED');
+  // Merkle
+  const merkleOk = chainData.every(b => (b.merkle_root || b.merkle));
+  setHealth('merkle', merkleOk ? 'ok' : 'warn', merkleOk ? 'ROOTS PRESENT' : 'SOME BLOCKS MISSING ROOT');
+
+  // Charts
+  const nowLabel = new Date().toLocaleTimeString();
+  pushChart(chartBlocksInst, nowLabel, totalBlocks);
+  pushChart(chartTPSInst,    nowLabel, parseFloat(tps) || 0);
+  pushChart(chartLogsInst,   nowLabel, totalLogs);
+
+  // Render explorer blocks
+  renderBlocks();
+  renderTxTable(allTransactions);
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function setHealth(key, state, value) {
+  const dot = document.getElementById('h-' + key);
+  const val = document.getElementById('hv-' + key);
+  if (dot) { dot.className = 'health-indicator ' + state; }
+  if (val) val.textContent = value;
+}
+
+/* ============================================================
+   BLOCK EXPLORER RENDER
+   ============================================================ */
+function renderBlocks(filter = '') {
+  const list = document.getElementById('blocksList');
+  const f = filter.toLowerCase().trim();
+  const filtered = f
+    ? chainData.filter(b =>
+        (b.hash || '').toLowerCase().includes(f) ||
+        String(b.index).includes(f) ||
+        (b.merkle_root || '').toLowerCase().includes(f))
+    : chainData;
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-state">No blocks match your search.</div>';
+    return;
+  }
+
+  // Reverse: newest first
+  list.innerHTML = [...filtered].reverse().map(block => {
+    const txs = block.transactions || block.data || block.tx || [];
+    const ts  = block.timestamp || block.created_at || '';
+    const isGenesis = block.index === 0;
+    return `
+<div class="block-card${isGenesis ? ' genesis' : ''}" id="bcard-${block.index}">
+  <div class="block-header-bar" onclick="toggleBlock(${block.index})">
+    <span class="block-index-badge">${isGenesis ? 'GENESIS' : '#' + String(block.index).padStart(4,'0')}</span>
+    <span class="block-hash-preview" title="${block.hash || ''}">${block.hash || 'N/A'}</span>
+    <span class="block-tx-count">${txs.length} TX</span>
+    <span class="block-chevron">▶</span>
+  </div>
+  <div class="block-details">
+    <div class="block-meta-grid">
+      <div class="meta-item">
+        <div class="meta-key">Block Hash</div>
+        <div class="meta-val">${block.hash || '—'}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-key">Previous Hash</div>
+        <div class="meta-val">${block.previous_hash || block.prev_hash || '—'}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-key">Timestamp</div>
+        <div class="meta-val">${ts ? new Date(ts).toLocaleString() : '—'}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-key">Merkle Root</div>
+        <div class="meta-val">${block.merkle_root || block.merkle || '—'}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-key">Transaction Count</div>
+        <div class="meta-val">${txs.length}</div>
+      </div>
+    </div>
+    ${txs.length > 0 ? `
+    <div class="tx-table-wrap" style="max-height:220px;overflow-y:auto;">
+      <table class="tx-table">
+        <thead><tr>
+          <th>TX ID</th><th>Log Hash</th><th>Source ID</th><th>Signature</th><th>Process</th><th>Source IP</th>
+        </tr></thead>
+        <tbody>${txs.map(tx => `<tr>
+          <td class="tx-id" title="${tx.tx_id||tx.id||''}">${(tx.tx_id||tx.id||'—').slice(0,18)}…</td>
+          <td title="${tx.log_hash||''}">${(tx.log_hash||'—').slice(0,16)}…</td>
+          <td>${tx.source_id||tx.sourceId||'—'}</td>
+          <td>${sigBadge(tx.signature_status||tx.sig_status)}</td>
+          <td>${tx.process_name||tx.process||'—'}</td>
+          <td>${tx.source_ip||tx.sourceIp||'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : '<div class="empty-state" style="padding:12px;">No transactions in this block.</div>'}
+  </div>
+</div>`;
+  }).join('');
+}
+
+function toggleBlock(idx) {
+  const card = document.getElementById('bcard-' + idx);
+  if (card) card.classList.toggle('expanded');
+}
+
+function filterBlocks() {
+  renderBlocks(document.getElementById('searchHash').value);
+}
+
+function clearBlockSearch() {
+  document.getElementById('searchHash').value = '';
+  renderBlocks();
+}
+
+/* ============================================================
+   TRANSACTIONS TABLE
+   ============================================================ */
+function renderTxTable(txs) {
+  const tbody = document.getElementById('txBody');
+  if (!txs || !txs.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No transactions found.</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = txs.slice(0, 200).map(tx => `
+<tr>
+  <td class="tx-id" title="${tx.tx_id||tx.id||''}">${(tx.tx_id||tx.id||'—').slice(0,16)}…</td>
+  <td title="${tx.log_hash||''}">${(tx.log_hash||'—').slice(0,14)}…</td>
+  <td>${tx.source_id||tx.sourceId||'—'}</td>
+  <td>${tx.consensus_timestamp ? new Date(tx.consensus_timestamp).toLocaleTimeString() : (tx.timestamp ? new Date(tx.timestamp).toLocaleTimeString() : '—')}</td>
+  <td>${sigBadge(tx.signature_status||tx.sig_status)}</td>
+  <td>${tx.process_name||tx.process||'—'}</td>
+  <td>${tx.source_ip||tx.sourceIp||'—'}</td>
+</tr>`).join('');
+}
+
+function filterTxs() {
+  const q = document.getElementById('searchTx').value.toLowerCase().trim();
+  const filtered = q
+    ? allTransactions.filter(tx =>
+        (tx.tx_id||'').toLowerCase().includes(q) ||
+        (tx.source_ip||tx.sourceIp||'').toLowerCase().includes(q) ||
+        (tx.process_name||tx.process||'').toLowerCase().includes(q) ||
+        (tx.source_id||tx.sourceId||'').toLowerCase().includes(q))
+    : allTransactions;
+  renderTxTable(filtered);
+}
+
+function sigBadge(status) {
+  const s = (status || '').toLowerCase();
+  if (s === 'valid')   return '<span class="sig-badge valid">✓ VALID</span>';
+  if (s === 'invalid') return '<span class="sig-badge invalid">✗ INVALID</span>';
+  return '<span class="sig-badge unknown">? UNKNOWN</span>';
+}
+
+/* ============================================================
+   VERIFICATION
+   ============================================================ */
+async function runVerify() {
+  const input   = document.getElementById('verifyInput').value.trim();
+  const btn     = document.getElementById('verifyBtn');
+  const statusEl= document.getElementById('verifyStatus');
+
+  if (!input) {
+    statusEl.innerHTML = resultHtml('warn', '⚠', 'EMPTY INPUT', 'Please paste forensic evidence JSON before verifying.');
+    return;
+  }
+
+  let payload;
+  try { payload = JSON.parse(input); }
+  catch (e) {
+    statusEl.innerHTML = resultHtml('v-mismatch', '✗', 'INVALID JSON', 'Could not parse input as JSON. Please check formatting.');
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.innerHTML = `<div class="loading-overlay"><div class="spinner"></div>Querying blockchain node…</div>`;
+
+  try {
+    const res = await fetch(API_VERIFY, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      mode:    'cors',
+      body:    JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    // Interpret result — adapt field names to your API's response
+    const status  = (data.status || data.result || data.verified || '').toString().toLowerCase();
+    const txId    = data.tx_id || payload.tx_id || '';
+    const detail  = data.message || data.detail || '';
+
+    if (status === 'verified' || status === 'true' || data.verified === true) {
+      statusEl.innerHTML = resultHtml('v-ok', '✓', 'VERIFIED', `TX ${txId}<br/>${detail || 'Evidence matches blockchain record.'}`);
+    } else if (status.includes('mismatch') || status.includes('hash')) {
+      statusEl.innerHTML = resultHtml('v-mismatch', '✗', 'HASH MISMATCH', detail || 'The provided hash does not match the on-chain record.');
+    } else if (status.includes('signature') || status.includes('sig')) {
+      statusEl.innerHTML = resultHtml('v-invalid', '⚠', 'INVALID SIGNATURE', detail || 'Signature verification failed.');
+    } else if (status.includes('not found') || status === 'false' || data.found === false) {
+      statusEl.innerHTML = resultHtml('v-notfound', '?', 'NOT FOUND ON BLOCKCHAIN', `TX ID ${txId} was not found in the chain.`);
+    } else {
+      statusEl.innerHTML = resultHtml('v-ok', '✓', 'RESPONSE RECEIVED', JSON.stringify(data).slice(0,120));
+    }
+  } catch (e) {
+    // Fallback: search locally
+    localVerify(payload, statusEl);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function localVerify(payload, statusEl) {
+  // Try local chain data as fallback
+  const txId = payload.tx_id || payload.id || '';
+  if (!txId) {
+    statusEl.innerHTML = resultHtml('v-notfound', '?', 'NOT FOUND ON BLOCKCHAIN', 'No tx_id provided and node is unreachable.');
+    return;
+  }
+  const found = allTransactions.find(tx => (tx.tx_id||tx.id||'') === txId);
+  if (!found) {
+    statusEl.innerHTML = resultHtml('v-notfound', '?', 'NOT FOUND ON BLOCKCHAIN', `TX ${txId} does not exist in the local chain cache.`);
+    return;
+  }
+  // Check hash
+  if (payload.log_hash && found.log_hash && payload.log_hash !== found.log_hash) {
+    statusEl.innerHTML = resultHtml('v-mismatch', '✗', 'HASH MISMATCH', `Expected: ${found.log_hash}<br/>Got: ${payload.log_hash}`);
+    return;
+  }
+  // Sig check
+  if ((found.signature_status||'').toLowerCase() === 'invalid') {
+    statusEl.innerHTML = resultHtml('v-invalid', '⚠', 'INVALID SIGNATURE', `TX ${txId} has an invalid signature on-chain.`);
+    return;
+  }
+  statusEl.innerHTML = resultHtml('v-ok', '✓', 'VERIFIED', `TX ${txId} found and verified against local cache (node offline).`);
+}
+
+function resultHtml(cls, icon, label, detail) {
+  return `
+<div class="verify-icon">${icon}</div>
+<div class="verify-label ${cls}">${label}</div>
+<div class="verify-detail">${detail}</div>`;
+}
+
+/* ============================================================
+   UI HELPERS
+   ============================================================ */
+function setRefreshing(on) {
+  const nav = document.getElementById('topnav');
+  if (on)  nav.classList.add('refreshing');
+  else     nav.classList.remove('refreshing');
+}
+
+function showError() {
+  document.getElementById('errorBanner').classList.add('show');
+  document.getElementById('statusDot').style.background = '#ffa500';
+  document.getElementById('statusText').textContent = 'NODE OFFLINE (DEMO MODE)';
+}
+
+function hideError() {
+  document.getElementById('errorBanner').classList.remove('show');
+  document.getElementById('statusDot').style.background = 'var(--ok)';
+  document.getElementById('statusText').textContent = 'NODE CONNECTED';
+}
+</script>
+</body>
+</html>
